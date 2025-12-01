@@ -2,10 +2,20 @@
 import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer, pipeline
 
-tokenizer = AutoTokenizer.from_pretrained("line-corporation/japanese-large-lm-3.6b-instruction-sft", use_fast=False)
-model = AutoModelForCausalLM.from_pretrained("line-corporation/japanese-large-lm-3.6b-instruction-sft")
+tokenizer = AutoTokenizer.from_pretrained(
+    "line-corporation/japanese-large-lm-3.6b-instruction-sft", 
+    use_fast=False
+)
+model = AutoModelForCausalLM.from_pretrained(
+    "line-corporation/japanese-large-lm-3.6b-instruction-sft"
+)
  
-generator = pipeline("text-generation", model=model, tokenizer=tokenizer, device=0)
+generator = pipeline(
+    "text-generation", 
+    model=model, 
+    tokenizer=tokenizer, 
+    device=0
+)
  
 input_text = """四国の県名を全て列挙してください。"""
 text = generator(
