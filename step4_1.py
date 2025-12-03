@@ -11,6 +11,7 @@ base_model_name = "ToPo-ToPo/rinna-japanese-gpt-neox-3.6b"
 
 # 学習したLoRAアダプターの保存先フォルダ
 peft_name = "models/lora-rinna-3.6b"  # step3.pyで指定した peft_name
+#peft_name = "models/trl-lora-rinna-3.6b-results/checkpoint-4400"
 
 #====================================================================
 # モデルとトークナイザーの準備
