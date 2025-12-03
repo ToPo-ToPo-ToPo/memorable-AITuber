@@ -9,8 +9,8 @@ from trl import SFTTrainer
 #-------------------------------------------------------------------------------------
 model_name = "ToPo-ToPo/rinna-japanese-gpt-neox-3.6b"
 dataset_name = "kunishou/databricks-dolly-15k-ja"
-peft_name = "outputs/trl-lora-rinna-3.6b"
-output_dir = "outputs/trl-lora-rinna-3.6b-results"
+peft_name = "models/trl-lora-rinna-3.6b"
+output_dir = "models/trl-lora-rinna-3.6b-results"
 
 #---------------------------------------------------------
 # モデルの準備 (Float32 / MPS)
