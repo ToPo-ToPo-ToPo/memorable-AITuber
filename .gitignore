@@ -1,3 +1,7 @@
+# My-settings
+models/*
+!models/.gitkeep
+
 # Python-generated files
 __pycache__/
 *.py[oc]
