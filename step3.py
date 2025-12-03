@@ -9,9 +9,8 @@ from trl import SFTTrainer
 #-------------------------------------------------------------------------------------
 model_name = "ToPo-ToPo/rinna-japanese-gpt-neox-3.6b"
 dataset_name = "kunishou/databricks-dolly-15k-ja"
-peft_name = "lora-rinna-3.6b"
-output_dir = "lora-rinna-3.6b-results"
-CUTOFF_LEN = 512 
+peft_name = "outputs/trl-lora-rinna-3.6b"
+output_dir = "outputs/trl-lora-rinna-3.6b-results"
 
 #---------------------------------------------------------
 # モデルの準備 (Float32 / MPS)
@@ -117,12 +116,11 @@ training_args = TrainingArguments(
 #---------------------------------------------------------
 trainer = SFTTrainer(
     model=model,
-    processing_class=tokenizer,  # 前回の修正点（ここも重要）
+    processing_class=tokenizer,
     train_dataset=train_data,
     eval_dataset=eval_data,
     peft_config=lora_config,
-    formatting_func=formatting_prompts_func, # 修正した関数を使用
-    #max_seq_length=CUTOFF_LEN,
+    formatting_func=formatting_prompts_func,
     args=training_args,
 )
 

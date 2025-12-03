@@ -9,8 +9,8 @@ from peft import LoraConfig, get_peft_model, TaskType
 # 基本情報
 model_name = "ToPo-ToPo/rinna-japanese-gpt-neox-3.6b"
 dataset = "kunishou/databricks-dolly-15k-ja"
-peft_name = "lora-rinna-3.6b"
-output_dir = "lora-rinna-3.6b-results"
+peft_name = "outputs/lora-rinna-3.6b"
+output_dir = "outputs/lora-rinna-3.6b-results"
 
 #---------------------------------------------------------
 # モデルの準備
