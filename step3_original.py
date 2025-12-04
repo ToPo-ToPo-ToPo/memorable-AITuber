@@ -26,8 +26,9 @@ model = AutoModelForCausalLM.from_pretrained(
 # 設定
 tokenizer = AutoTokenizer.from_pretrained(model_name, use_fast=False)
 
-#CUTOFF_LEN = 256  # コンテキスト長
-CUTOFF_LEN = 521
+# コンテキスト長
+#CUTOFF_LEN = 256  # v1  
+CUTOFF_LEN = 521  # v2
 
 # トークナイズ関数
 def tokenize(prompt, tokenizer):
