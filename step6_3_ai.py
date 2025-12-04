@@ -4,6 +4,8 @@ from transformers import AutoModelForCausalLM, AutoTokenizer, TrainingArguments,
 from datasets import load_dataset
 from peft import LoraConfig, get_peft_model, TaskType
 
+# 使用メモリは50GB程度
+
 # ==========================================
 # 1. 設定エリア
 # ==========================================
@@ -11,18 +13,17 @@ model_name = "ToPo-ToPo/rinna-japanese-gpt-neox-3.6b-lora-sft-v1"
 
 # ★ここにあなたのHugging FaceのリポジトリIDを入力してください
 # 例: "user_name/my-aituber-dataset"
-HF_DATASET_ID = "ToPo-ToPo/character-data-Ai"
+HF_DATASET_ID = "ToPo-ToPo/ai-characters-QA"
 
-# ★リポジトリ内のファイル名 (jsonl)
-# 例: "data.jsonl" や "train.jsonl"
-HF_DATA_FILE = "data.jsonl"
+# リポジトリ内のファイル名 (jsonl)
+HF_DATA_FILE = "dataset-Ai.jsonl"
 
 # 保存先
-peft_name = "models/lora-rinna-3.6b-phase2-nemu"
+peft_name = "models/lora-rinna-3.6b-phase2-ai"
 output_dir = "models/lora-rinna-3.6b-phase2-results"
 
 # コンテキスト長 (Systemプロンプトが入るため512必須)
-CUTOFF_LEN = 512 
+CUTOFF_LEN = 1024
 
 # ==========================================
 # 2. モデルとトークナイザーの準備
