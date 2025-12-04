@@ -5,6 +5,7 @@ from datasets import load_dataset
 from peft import LoraConfig, get_peft_model, TaskType
 #-------------------------------------------------------------------------------------
 # Step 3: LoRAによるファインチューニング
+# Trainerクラスを直接使うver
 #-------------------------------------------------------------------------------------
 # 基本情報
 model_name = "ToPo-ToPo/rinna-japanese-gpt-neox-3.6b"

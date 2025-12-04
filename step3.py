@@ -1,3 +1,10 @@
+
+#-------------------------------------------------------------------------------------
+# Step 3: LoRAによるファインチューニング
+# SFTTrainerクラスを使うver
+# 使用メモリ多めだった
+#-------------------------------------------------------------------------------------
+
 import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer, TrainingArguments
 from datasets import load_dataset
