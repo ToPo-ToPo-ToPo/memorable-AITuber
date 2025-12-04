@@ -10,7 +10,7 @@ from peft import PeftModel
 base_model_name = "models/rinna-japanese-gpt-neox-3.6b-lora-sft-v1"
 
 # ★ここを変更: Phase 2で学習したLoRAモデルのパス
-peft_name = "models/lora-rinna-3.6b-phase2-Ai" 
+peft_name = "models/lora-rinna-3.6b-phase2-ai" 
 
 # ★重要: 学習に使ったものと「全く同じ」システムプロンプトを貼り付けてください
 # (これを入れないとキャラが降臨しません)
