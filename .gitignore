@@ -1,6 +1,8 @@
 # My-settings
+.DS_Store
 models/*
 !models/.gitkeep
+*.jsonl
 
 # Python-generated files
 __pycache__/

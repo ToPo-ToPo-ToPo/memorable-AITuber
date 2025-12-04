@@ -1,3 +1,4 @@
+
 import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer, TrainingArguments, Trainer, DataCollatorForLanguageModeling
 from datasets import load_dataset
@@ -8,21 +9,27 @@ from peft import LoraConfig, get_peft_model, TaskType
 # ==========================================
 model_name = "models/rinna-japanese-gpt-neox-3.6b-lora-sft-v1"
 
-# ★あなたのJSONLファイルのパスを指定してください
-dataset_file = "dataset/data.jsonl" 
+# ★ここにあなたのHugging FaceのリポジトリIDを入力してください
+# 例: "user_name/my-aituber-dataset"
+HF_DATASET_ID = "ToPo-ToPo/character-data-Ai"
+
+# ★リポジトリ内のファイル名 (jsonl)
+# 例: "data.jsonl" や "train.jsonl"
+HF_DATA_FILE = "data.jsonl"
 
 # 保存先
-peft_name = "models/lora-rinna-3.6b-phase2-kataru"
+peft_name = "models/lora-rinna-3.6b-phase2-nemu"
 output_dir = "models/lora-rinna-3.6b-phase2-results"
 
-# コンテキスト長 (Systemプロンプトが長いので512必須)
+# コンテキスト長 (Systemプロンプトが入るため512必須)
 CUTOFF_LEN = 512 
 
 # ==========================================
 # 2. モデルとトークナイザーの準備
 # ==========================================
 print("モデルを読み込んでいます...")
-# Mac (MPS) 用の設定
+
+# Mac (MPS) 用の設定: float32で安定化
 model = AutoModelForCausalLM.from_pretrained(
     model_name,
     device_map="mps",         
@@ -37,15 +44,18 @@ if tokenizer.pad_token is None:
 # ==========================================
 # 3. データセット読み込みとプロンプト変換
 # ==========================================
-print("データセットを処理しています...")
+print(f"Hugging Face ({HF_DATASET_ID}) からデータを取得しています...")
 
-# JSONLファイルを読み込む
-dataset = load_dataset("json", data_files=dataset_file)
+# Hugging FaceからJSONLを読み込む
+dataset = load_dataset(
+    HF_DATASET_ID,
+    data_files=HF_DATA_FILE,
+    split="train" # 最初からtrain分割として読み込む
+)
 
 def generate_and_tokenize_prompt(data_point):
     """
-    JSONLの 'messages' を Phase 1のフォーマットに変換し、
-    長さ(512)を揃えてトークナイズする関数
+    JSONL(messages) -> Phase 1形式(テキスト) -> Tokenize(512固定)
     """
     messages = data_point["messages"]
     
@@ -53,11 +63,10 @@ def generate_and_tokenize_prompt(data_point):
     user_text = ""
     assistant_text = ""
 
-    # messagesリストから各ロールの中身を抽出
+    # roleごとに中身を抽出
     for msg in messages:
         role = msg.get("role")
         content = msg.get("content", "")
-        
         if role == "system":
             system_text = content
         elif role == "user":
@@ -65,7 +74,7 @@ def generate_and_tokenize_prompt(data_point):
         elif role == "assistant":
             assistant_text = content
 
-    # Phase 1のフォーマットへのマッピング
+    # Phase 1 のフォーマットに変換
     full_prompt = (
         f"### 指示:\n"
         f"{system_text}\n\n"
@@ -75,46 +84,41 @@ def generate_and_tokenize_prompt(data_point):
         f"{assistant_text}"
     )
     
-    # Rinnaモデル用に改行コードを <NL> に置換
+    # 改行コード変換
     full_prompt = full_prompt.replace('\n', '<NL>')
-    
-    # EOSトークン (終了記号) を付与
     full_prompt = full_prompt + tokenizer.eos_token
 
     # ---------------------------------------------------------
-    # ★重要な修正点: padding="max_length"
-    # これで全てのデータが強制的に512トークンの長さになります
+    # ★重要: padding="max_length" で長さを強制的に512に揃える
+    # これで ValueError (Shape mismatch) を回避
     # ---------------------------------------------------------
     tokenized_full_prompt = tokenizer(
         full_prompt,
         truncation=True,
         max_length=CUTOFF_LEN, # 512
-        padding="max_length",  # ← 短いデータは空白で埋める
+        padding="max_length",  # 空白埋め有効
     )
     
     # ---------------------------------------------------------
-    # ★パディング部分を学習しないための処理
-    # 空白(pad_token_id)の場所の正解ラベルを -100 に書き換えます
+    # ★重要: パディング部分を学習対象外(-100)にする
     # ---------------------------------------------------------
     input_ids = tokenized_full_prompt["input_ids"]
-    labels = list(input_ids) # コピーを作成
-    
-    # パディングトークンの場所を探して -100 にする
+    labels = list(input_ids)
     pad_token_id = tokenizer.pad_token_id
+    
     labels = [
         -100 if token == pad_token_id else token 
         for token in labels
     ]
-    
     tokenized_full_prompt["labels"] = labels
     
     return tokenized_full_prompt
 
-# データセットの分割とトークナイズ実行
-# ここで `train_data` と `eval_data` を定義します（これがないと NameError になります）
-train_val = dataset["train"].train_test_split(test_size=20, shuffle=True, seed=42)
+# データセットの分割
+print("データのトークナイズ処理を実行中...")
+train_val = dataset.train_test_split(test_size=20, shuffle=True, seed=42)
 
-# mapを使って一括処理
+# マップ処理実行
 train_data = train_val["train"].shuffle().map(generate_and_tokenize_prompt)
 eval_data = train_val["test"].shuffle().map(generate_and_tokenize_prompt)
 
@@ -126,9 +130,9 @@ print(f"検証データ数: {len(eval_data)}")
 # ==========================================
 print("LoRAを設定しています...")
 lora_config = LoraConfig(
-    r=32,                   # キャラ性を出すためRank大
-    lora_alpha=64,          # 影響度を強く
-    target_modules=[        # 全層学習で表現力を最大化
+    r=32,                   # キャラクター性を強く
+    lora_alpha=64,          # 重みを強く
+    target_modules=[        # 全層学習
         "query_key_value", 
         "dense", 
         "dense_h_to_4h", 
@@ -145,14 +149,15 @@ model.print_trainable_parameters()
 # ==========================================
 # 5. Trainer設定と実行
 # ==========================================
-print("学習設定を初期化しています...")
+print("学習を開始します...")
+
 trainer = Trainer(
     model=model,
-    train_dataset=train_data,   # ここで定義済みの train_data を渡す
-    eval_dataset=eval_data,     # ここで定義済みの eval_data を渡す
+    train_dataset=train_data,
+    eval_dataset=eval_data,
     args=TrainingArguments(
         output_dir=output_dir,
-        num_train_epochs=10,       # 10周回す
+        num_train_epochs=10,       # 10周
         learning_rate=3e-4,
         logging_steps=10,
         save_strategy="epoch",
@@ -160,16 +165,15 @@ trainer = Trainer(
         save_total_limit=2,
         report_to="none",
         
-        # Mac (MPS) 用
+        # Mac (MPS) 用設定
         optim="adamw_torch",         
         per_device_train_batch_size=1, 
         gradient_accumulation_steps=4,
-        fp16=False,
+        fp16=False, # MPS安定のためFalse
     ),
     data_collator=DataCollatorForLanguageModeling(tokenizer, mlm=False),
 )
 
-print("学習を開始します...")
 trainer.train()
 
 # ==========================================
@@ -179,4 +183,4 @@ print("モデルを保存しています...")
 trainer.model.save_pretrained(peft_name)
 tokenizer.save_pretrained(peft_name)
 
-print(f"完了しました！ モデル保存先: {peft_name}")
+print(f"完了しました！ 保存先: {peft_name}")
