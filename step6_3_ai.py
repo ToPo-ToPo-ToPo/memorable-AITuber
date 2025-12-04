@@ -7,7 +7,7 @@ from peft import LoraConfig, get_peft_model, TaskType
 # ==========================================
 # 1. 設定エリア
 # ==========================================
-model_name = "models/rinna-japanese-gpt-neox-3.6b-lora-sft-v1"
+model_name = "ToPo-ToPo/rinna-japanese-gpt-neox-3.6b-lora-sft-v1"
 
 # ★ここにあなたのHugging FaceのリポジトリIDを入力してください
 # 例: "user_name/my-aituber-dataset"
