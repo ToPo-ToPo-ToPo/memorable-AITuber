@@ -122,6 +122,7 @@ trainer = SFTTrainer(
     peft_config=lora_config,
     formatting_func=formatting_prompts_func,
     args=training_args,
+    max_length=512,  # エラーが出たら消す
 )
 
 #---------------------------------------------------------
