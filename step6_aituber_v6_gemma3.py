@@ -10,8 +10,8 @@ if __name__ == "__main__":
     config = TrainingConfig(
         model_name="ToPo-ToPo/rinna-japanese-gpt-neox-3.6b-lora-sft-v1",
         hf_dataset_id="ToPo-ToPo/ai-characters-QA",
-        hf_data_file="dataset-aituber-v6-gamma3-27b.jsonl",
-        peft_name="models/rinna-japanese-gpt-neox-3.6b-lora-aituber-v6-gemma3-27b",
+        hf_data_file="dataset-meguru-v8-gamma3-27b.jsonl",
+        peft_name="models/rinna-japanese-gpt-neox-3.6b-lora-meguru-v8-gemma3-27b",
         epochs=10,
         lora_r=32,
         lora_alpha=64
