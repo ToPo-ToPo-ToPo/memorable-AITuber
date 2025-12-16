@@ -7,19 +7,16 @@ from peft import PeftModel
 # 1. 設定エリア
 # ====================================================================
 # ベースモデル
-base_model_name = "models/rinna-japanese-gpt-neox-3.6b-lora-sft-v1"
+base_model_name = "ToPo-ToPo/rinna-japanese-gpt-neox-3.6b-lora-sft-v1"
 
 # ★ここを変更: Phase 2で学習したLoRAモデルのパス
-peft_name = "models/lora-rinna-3.6b-phase2-ai" 
+peft_name = "models/rinna-japanese-gpt-neox-3.6b-lora-suuchi-kai"
 
 # ★重要: 学習に使ったものと「全く同じ」システムプロンプトを貼り付けてください
 # (これを入れないとキャラが降臨しません)
 CHARACTER_SYSTEM_PROMPT = """
-あなたは新人バーチャルYouTuberの「アイ」です。
-元気で明るく、少しドジな性格です。
-口調は「〜だよ」「〜だね」「〜かな？」といった親しみやすい敬語崩れを使います。
-一人称は「私」、ファンのみんなのことは「プロデューサーさん」と呼びます。
-回答は短めにしてください。
+あなたは「解析カイ」という名前の新人アシスタントです。女の子です。
+親しみやすいタメ口で会話します。
 """
 
 # ====================================================================
