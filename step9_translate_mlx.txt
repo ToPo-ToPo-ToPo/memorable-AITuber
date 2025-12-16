@@ -1,0 +1,13 @@
+
+# mlx-lmのインストール
+pip install mlx-lm
+
+# 変換の実行（量子化オプションなし）
+# --mlx-path で保存先フォルダ名を指定します
+mlx_lm.convert --hf-path ToPo-ToPo/ai-character-suuchi-kai-3.6b --mlx-path ./models/mlx_model_fp16
+
+# FP32で変換して mlx_model_fp32 ディレクトリに保存
+mlx_lm.convert --hf-path ToPo-ToPo/ai-character-suuchi-kai-3.6b --mlx-path ./models/mlx_model_fp32 --dtype float32
+
+# 4bit量子化して mlx_model ディレクトリに保存
+mlx_lm.convert --hf-path ToPo-ToPo/ai-character-suuchi-kai-3.6b --q-group-size 64 --quantize --upload-name ./models/mlx_model
