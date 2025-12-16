@@ -9,7 +9,7 @@ from transformers import (
 )
 
 # ============================================================
-# 設定
+# 設定エリア
 # ============================================================
 BASE_MODEL_NAME = "ToPo-ToPo/ai-character-suuchi-kai-3.6b"
 
@@ -18,12 +18,13 @@ CHARACTER_SYSTEM_PROMPT = """
 親しみやすいタメ口で会話します。
 """
 
-STREAM_DELAY = 0.03          # 表示速度（秒 / トークン）
+STREAM_DELAY = 0.05
 MAX_NEW_TOKENS = 256
 
 # ============================================================
-# モデル読み込み
+# モデル準備
 # ============================================================
+print(f"Gradio version: {gr.__version__}")
 print("モデルを読み込んでいます...")
 
 tokenizer = AutoTokenizer.from_pretrained(
@@ -36,51 +37,96 @@ if tokenizer.pad_token is None:
 model = AutoModelForCausalLM.from_pretrained(
     BASE_MODEL_NAME,
     device_map="mps",           # Apple Silicon
+    #torch_dtype=torch.bfloat16, # 高速化
     low_cpu_mem_usage=True
 )
 
 model.eval()
-
-# ウォームアップ（初回のカクつき防止）
-dummy = tokenizer("test", return_tensors="pt").to(model.device)
-model.generate(**dummy, max_new_tokens=1)
-
 print("準備完了")
 
 # ============================================================
-# messages → モデル用プロンプト変換
+# ★重要：データクリーニング関数
 # ============================================================
-def build_prompt_from_messages(messages):
+def get_clean_text(msg):
     """
-    Gradio messages形式 → Rinna風プロンプト
+    Gradio 6.x の複雑なデータ構造から、純粋なテキストだけを抽出する関数
+    入力が辞書でもオブジェクトでも、中身がリストでも文字列でも対応します。
     """
-    prompt = f"### 入力:\n{CHARACTER_SYSTEM_PROMPT.strip()}\n\n"
+    # 1. まずメッセージオブジェクトから content と role を取り出す
+    if isinstance(msg, dict):
+        content = msg.get('content', '')
+    else:
+        # ChatMessageオブジェクトの場合
+        content = getattr(msg, 'content', '')
 
-    i = 0
-    while i < len(messages) - 1:
-        if messages[i]["role"] == "user" and messages[i + 1]["role"] == "assistant":
-            prompt += f"### 指示:\n{messages[i]['content']}\n\n"
-            prompt += f"### 回答:\n{messages[i + 1]['content']}\n\n"
-            i += 2
-        else:
-            i += 1
+    # 2. content がリスト形式（[{'text': '...', 'type': 'text'}]）の場合の処理
+    if isinstance(content, list):
+        text_parts = []
+        for item in content:
+            if isinstance(item, dict) and item.get('type') == 'text':
+                text_parts.append(item.get('text', ''))
+        return "".join(text_parts)
+    
+    # 3. 単純な文字列の場合
+    return str(content)
 
-    return prompt
+def get_role(msg):
+    """ロールを取り出す"""
+    if isinstance(msg, dict):
+        return msg.get('role', '')
+    return getattr(msg, 'role', '')
 
 # ============================================================
-# ストリーミング生成（Gradio用）
+# 推論ロジック
 # ============================================================
+
+def add_user_message(user_message, history):
+    if not user_message:
+        return "", history
+    if history is None:
+        history = []
+    
+    # UI表示用には ChatMessage をそのまま使う
+    history.append(gr.ChatMessage(role="user", content=user_message))
+    return "", history
+
 @torch.inference_mode()
-def chat_stream(user_message, messages):
-    """
-    Gradio Chatbot (messages形式) 用ストリーミング関数
-    """
-    messages = messages or []
+def bot_stream(history):
+    if not history:
+        yield history
+        return
 
-    # プロンプト構築
-    prompt = build_prompt_from_messages(messages)
-    prompt += f"### 指示:\n{user_message}\n\n### 回答:\n"
+    # ---------------------------------------------------------
+    # プロンプト構築（クリーニング関数を通す！）
+    # ---------------------------------------------------------
+    prompt = ""
+    
+    # 1. 過去の履歴（直前以外）
+    for msg in history[:-1]:
+        role = get_role(msg)
+        text = get_clean_text(msg) # ★ここで綺麗なテキストにする
+        
+        if role == "user":
+            prompt += f"### 指示:\n{text}\n\n"
+        elif role == "assistant":
+            prompt += f"### 回答:\n{text}\n\n"
+    
+    # 2. 今回のターン
+    last_msg = history[-1]
+    current_user_text = get_clean_text(last_msg) # ★ここも綺麗にする
+    
+    prompt += (
+        f"### 指示:\n{current_user_text}\n\n"
+        f"### 入力:\n{CHARACTER_SYSTEM_PROMPT.strip()}\n\n"
+        f"### 回答:\n"
+    )
 
+    # デバッグ用：今度こそ綺麗なテキストが出ているか確認
+    print("\n--- 生成プロンプト確認 ---\n" + prompt + "\n------------------------")
+
+    # ---------------------------------------------------------
+    # 生成処理
+    # ---------------------------------------------------------
     inputs = tokenizer(
         prompt,
         return_tensors="pt",
@@ -105,66 +151,55 @@ def chat_stream(user_message, messages):
         streamer=streamer
     )
 
-    # 生成は別スレッド
-    thread = threading.Thread(
-        target=model.generate,
-        kwargs=generation_kwargs
-    )
+    thread = threading.Thread(target=model.generate, kwargs=generation_kwargs)
     thread.start()
 
-    # messages に新しい発言を追加
-    messages = messages + [
-        {"role": "user", "content": user_message},
-        {"role": "assistant", "content": ""}
-    ]
+    # 履歴にAI枠を追加
+    ai_msg = gr.ChatMessage(role="assistant", content="")
+    history.append(ai_msg)
 
-    # ストリーミング表示
+    generated_text = ""
     for token in streamer:
-        messages[-1]["content"] += token
-        yield messages
-
-        if token.endswith(("。", "！", "？", "\n")):
+        generated_text += token
+        clean_text = generated_text.replace("<NL>", "\n")
+        
+        # UI更新（オブジェクトのcontentを書き換え）
+        # ※オブジェクトなら直接書き換えてもリスト化されにくいが、念のため
+        if isinstance(history[-1], dict):
+             history[-1]['content'] = clean_text
+        else:
+             history[-1].content = clean_text
+        
+        yield history
+        
+        if clean_text.endswith(("。", "！", "？", "\n")):
             time.sleep(STREAM_DELAY * 3)
         else:
             time.sleep(STREAM_DELAY)
 
 # ============================================================
-# Gradio UI
+# UI構築
 # ============================================================
 with gr.Blocks(title="解析カイ Chatbot") as demo:
-    gr.Markdown("## 🤖 解析カイ（Gradio 6.x / messages形式 / スムーズ表示）")
+    gr.Markdown(f"## 🤖 解析カイ (Gradio v{gr.__version__} Fixed)")
+    
+    chatbot = gr.Chatbot(height=500)
 
-    chatbot = gr.Chatbot(
-        height=450
-    )
-
-    textbox = gr.Textbox(
-        placeholder="メッセージを入力してね",
-        show_label=False
-    )
-
-    clear_btn = gr.Button("履歴クリア")
-
-    textbox.submit(
-        chat_stream,
-        inputs=[textbox, chatbot],
-        outputs=chatbot
-    )
+    with gr.Row():
+        textbox = gr.Textbox(
+            placeholder="メッセージを入力してEnter...",
+            show_label=False,
+            scale=9
+        )
+        clear_btn = gr.Button("クリア", scale=1)
 
     textbox.submit(
-        lambda: "",
-        None,
-        textbox
+        add_user_message, [textbox, chatbot], [textbox, chatbot], queue=False
+    ).then(
+        bot_stream, [chatbot], [chatbot]
     )
 
-    clear_btn.click(
-        lambda: [],
-        None,
-        chatbot
-    )
+    clear_btn.click(lambda: [], None, chatbot, queue=False)
 
-# ============================================================
-# 起動
-# ============================================================
 if __name__ == "__main__":
     demo.queue().launch()
