@@ -1,6 +1,6 @@
 
 
-from step6 import TrainingConfig, LoRATrainer
+from step6_character_lora_train_class import TrainingConfig, LoRATrainer
 # =========================================================================
 # 3. 実行エントリーポイント
 # =========================================================================
@@ -10,8 +10,8 @@ if __name__ == "__main__":
     config = TrainingConfig(
         model_name="ToPo-ToPo/rinna-japanese-gpt-neox-3.6b-lora-sft-v1",
         hf_dataset_id="ToPo-ToPo/ai-characters-QA",
-        hf_data_file="dataset-aituber-v4.jsonl",
-        peft_name="models/rinna-japanese-gpt-neox-3.6b-lora-aituber-v4",
+        hf_data_file="dataset-aituber-suuchi-kai-llama-cpp.jsonl",
+        peft_name="models/rinna-japanese-gpt-neox-3.6b-lora-suuchi-kai",
         epochs=10,
         lora_r=32,
         lora_alpha=64

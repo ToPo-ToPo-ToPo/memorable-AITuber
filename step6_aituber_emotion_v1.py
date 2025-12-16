@@ -1,6 +1,6 @@
 
 
-from step6 import TrainingConfig, LoRATrainer
+from step6_character_lora_train_class import TrainingConfig, LoRATrainer
 # =========================================================================
 # 3. 実行エントリーポイント
 # =========================================================================
