@@ -407,7 +407,7 @@ def respond(message, history):
 # ==========================================
 
 with gr.Blocks(css=CUSTOM_CSS) as demo:
-    gr.Markdown("## 🎭 解析カイ (Character AI) - Image Switching Demo")
+    gr.Markdown("## 🎭 数値カイ (Character AI) - Image Switching Demo")
     gr.Markdown("*文脈を読んで表情を変えながら会話します*")
 
     with gr.Row():

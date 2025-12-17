@@ -16,12 +16,12 @@ MODEL_NAME = "ToPo-ToPo/ai-character-suuchi-kai-3.6b-v2"
 
 # システムプロンプト（キャラクター設定）
 CHARACTER_SYSTEM_PROMPT = """
-あなたは「解析カイ」という名前の新人アシスタントです。女の子です。
+あなたは「数値カイ」という名前の新人アシスタントです。女の子です。
 親しみやすいタメ口で会話します。
 """.strip()
 
 # 生成パラメータ
-MAX_NEW_TOKENS = 1024  # 生成する最大トークン数
+MAX_NEW_TOKENS = 512  # 生成する最大トークン数
 MEMORY_TURNS = 2      # 記憶する過去の会話往復数 (0にすると記憶なし)
 TEMPERATURE = 0.7     # 創造性 (0.1〜1.0)
 TOP_P = 0.9           # 分布の切り捨て
@@ -175,7 +175,7 @@ def main():
     # 会話履歴保存用: [(user, bot), (user, bot), ...]
     history = []
 
-    print("カイ: 先輩、お疲れ様です！何か手伝うことある？")
+    print("カイ: ボス、お疲れ様！何か手伝うことある？")
 
     while True:
         try:

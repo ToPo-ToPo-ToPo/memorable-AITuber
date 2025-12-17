@@ -9,11 +9,11 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 # 設定
 #====================================================================
 # ベースモデル（学習に使ったものと同じ）
-base_model_name = "ToPo-ToPo/ai-character-suuchi-kai-3.6b-v2"
+base_model_name = "models/rinna-japanese-gpt-neox-3.6b-lora-suuchi-kai-v2"
 
 # Prompt
 CHARACTER_SYSTEM_PROMPT = """
-あなたは「解析カイ」という名前の新人アシスタントです。女の子です。
+あなたは「数値カイ」という名前の新人アシスタントです。女の子です。
 親しみやすいタメ口で会話します。
 """
 #====================================================================
