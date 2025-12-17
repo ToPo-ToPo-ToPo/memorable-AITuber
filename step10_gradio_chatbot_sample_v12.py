@@ -16,18 +16,24 @@ from transformers import (
 # 1. 設定
 # ==========================================
 
-MODEL_NAME = "ToPo-ToPo/rinna-japanese-gpt-neox-3.6b-lora-sft-v2"
+# モデル設定 (Code Bより)
+MODEL_NAME = "ToPo-ToPo/ai-character-suuchi-kai-3.6b-v2"
 CHAR_IMAGE_DIR = "assets/characters_v1"
 
-SYSTEM_PROMPT = ""
+# システムプロンプト (Code Bより)
+SYSTEM_PROMPT = """
+あなたは「数値カイ」という名前の新人アシスタントです。女の子です。
+親しみやすいタメ口で会話します。
+""".strip()
 
-MAX_NEW_TOKENS = 512
-SENTENCE_PAUSE_DURATION = 1.5
+# 生成パラメータ (Code Bより調整)
+MAX_NEW_TOKENS = 1024
+MEMORY_TURNS = 2       # 記憶する過去の会話往復数
+SENTENCE_PAUSE_DURATION = 1.0 # 画像切り替えのためのウェイト
 
 DEFAULT_IMAGE_PATH = os.path.join(CHAR_IMAGE_DIR, "normal1.png")
 
-# 【修正】CSS定義
-# 「枠（border）」を表示するように変更しました。
+# CSS定義 (Code Aを維持)
 CUSTOM_CSS = """
 /* ▼ メインの枠 */
 #character-view {
@@ -128,6 +134,7 @@ print(f"使用デバイス: {device}")
 # 4. モデルロード
 # ==========================================
 
+print(f"モデル読み込み中: {MODEL_NAME}")
 tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME, use_fast=False)
 model = AutoModelForCausalLM.from_pretrained(
     MODEL_NAME,
@@ -212,142 +219,75 @@ def split_sentences(text):
         sentences.append(current)
     return sentences
 
-# ==========================================
-# 6. ストリーミング生成
-# ==========================================
-
-"""def stream_generate(message, history):
-    prompt = f"システム: {SYSTEM_PROMPT}<NL>"
-
-    paired_history = []
-    current_user = None
-
-    for item in history:
-        role = item["role"]
-        content = normalize(item["content"])
-
-        if role == "user":
-            current_user = content
-        elif role == "assistant" and current_user is not None:
-            paired_history.append((current_user, content))
-            current_user = None
-
-    for user_turn, bot_turn in paired_history[-3:]:
-        prompt += (
-            f"ユーザー: {user_turn.replace(chr(10), '<NL>')}<NL>"
-            f"システム: {bot_turn.replace(chr(10), '<NL>')}<NL>"
-        )
-
-    prompt += f"ユーザー: {message.replace(chr(10), '<NL>')}<NL>システム: "
-
-    input_ids = tokenizer.encode(
-        prompt,
-        add_special_tokens=False,
-        return_tensors="pt"
-    ).to(model.device)
-
-    streamer = TextIteratorStreamer(
-        tokenizer,
-        skip_prompt=True,
-        skip_special_tokens=True,
-    )
-
-    generation_kwargs = dict(
-        input_ids=input_ids,
-        max_new_tokens=MAX_NEW_TOKENS,
-        do_sample=True,
-        temperature=0.7,
-        top_p=0.9,
-        repetition_penalty=1.1,
-        pad_token_id=tokenizer.pad_token_id,
-        eos_token_id=tokenizer.eos_token_id,
-        streamer=streamer,
-    )
-
-    thread = threading.Thread(
-        target=model.generate,
-        kwargs=generation_kwargs,
-    )
-    thread.start()
-
-    buffer = ""
-    displayed_text = ""
+def clean_response(text):
+    """
+    Code B由来: 生成されたテキストが文の途中で終わっている場合、
+    最後の句読点までカットして整える関数。
+    """
+    ends = ["。", "！", "？", "\n", "!", "?", "."]
+    stripped_text = text.strip()
     
-    for new_text in streamer:
-        buffer += new_text
-        clean_buffer = buffer.replace("<NL>", "\n")
-        
-        sentences = split_sentences(clean_buffer)
-        
-        if len(sentences) > 1 or (len(sentences) == 1 and any(sentences[0].endswith(end) for end in ["。", "！", "？", "\n"])):
-            for i, sentence in enumerate(sentences[:-1]):
-                if displayed_text and not displayed_text.endswith("\n"):
-                    displayed_text += "\n"
-                displayed_text += sentence
-                yield displayed_text, sentence
-                time.sleep(SENTENCE_PAUSE_DURATION)
-            
-            if len(sentences) > 0 and any(sentences[-1].endswith(end) for end in ["。", "！", "？", "\n"]):
-                if displayed_text and not displayed_text.endswith("\n"):
-                    displayed_text += "\n"
-                displayed_text += sentences[-1]
-                yield displayed_text, sentences[-1]
-                time.sleep(SENTENCE_PAUSE_DURATION)
-                buffer = ""
-            else:
-                buffer = sentences[-1] if sentences else ""
+    if any(stripped_text.endswith(e) for e in ends):
+        return stripped_text
+
+    for i in range(len(stripped_text) - 1, -1, -1):
+        if stripped_text[i] in ends:
+            return stripped_text[:i+1]
     
-    if buffer:
-        clean_buffer = buffer.replace("<NL>", "\n")
-        if displayed_text and not displayed_text.endswith("\n"):
-            displayed_text += "\n"
-        displayed_text += clean_buffer
-        yield displayed_text, clean_buffer"""
+    return stripped_text
+
+# ==========================================
+# 6. プロンプト構築 & ストリーミング生成
+# ==========================================
+
+def build_prompt(current_message, history):
+    """
+    Code B由来のロジックをGradioの履歴形式に適用
+    """
+    prompt = ""
+    
+    # 1. Gradioの履歴(list of dicts)を (user, assistant) のペアに変換
+    pairs = []
+    current_user_text = None
+    
+    for msg in history:
+        role = msg['role']
+        content = normalize(msg['content'])
+        
+        if role == 'user':
+            current_user_text = content
+        elif role == 'assistant' and current_user_text is not None:
+            pairs.append((current_user_text, content))
+            current_user_text = None
+    
+    # 2. 直近 MEMORY_TURNS 分だけ取得 (Code Bロジック)
+    if MEMORY_TURNS > 0:
+        recent_pairs = pairs[-MEMORY_TURNS:]
+    else:
+        recent_pairs = []
+
+    for user_text, bot_text in recent_pairs:
+        safe_user = user_text.replace("\n", "<NL>")
+        safe_bot = bot_text.replace("\n", "<NL>")
+        prompt += f"ユーザー: {safe_user}<NL>システム: {safe_bot}<NL>"
+
+    # 3. 今回の入力を追加 (システムプロンプトをここに埋め込む: Code Bロジック)
+    safe_current = current_message.strip().replace("\n", "<NL>")
+    safe_system = SYSTEM_PROMPT.replace("\n", "<NL>")
+    
+    prompt += f"ユーザー: {safe_system}<NL>{safe_current}<NL>システム: "
+    
+    return prompt
 
 def stream_generate(message, history):
     # ---------------------------------------------------------
-    # プロンプト作成（超シンプル版）
+    # プロンプト作成 (Code Bのロジックを使用)
     # ---------------------------------------------------------
-    
-    # 1. システムプロンプト
-    if SYSTEM_PROMPT and SYSTEM_PROMPT.strip():
-        prompt = f"システム: {SYSTEM_PROMPT}<NL>"
-    else:
-        prompt = ""
-
-    # 2. 履歴の解析
-    paired_history = []
-    current_user_hist = None
-    for item in history:
-        role = item["role"]
-        content = normalize(item["content"])
-        if role == "user":
-            current_user_hist = content
-        elif role == "assistant" and current_user_hist is not None:
-            paired_history.append((current_user_hist, content))
-            current_user_hist = None
-
-    # 3. 「直前の1往復」だけを取り出してプロンプトに追加
-    # ※ 履歴が存在する場合のみ処理
-    if len(paired_history) > 0:
-        last_user, last_bot = paired_history[-1] # 最後（直前）のやり取りを取得
-        
-        safe_last_user = last_user.strip().replace('\n', '<NL>')
-        safe_last_bot = last_bot.strip().replace('\n', '<NL>')
-        
-        prompt += f"ユーザー: {safe_last_user}<NL>システム: {safe_last_bot}<NL>"
-
-    # 4. 現在の入力を追加
-    safe_message = message.strip().replace('\n', '<NL>')
-    prompt += f"ユーザー: {safe_message}<NL>システム: "
-
-    # デバッグ用: プロンプトの中身を確認したい場合はコメントアウトを外す
-    # print(f"--- Prompt ---\n{prompt}\n----------------")
+    prompt = build_prompt(message, history)
 
     # ---------------------------------------------------------
     # 生成処理
     # ---------------------------------------------------------
-
     input_ids = tokenizer.encode(
         prompt,
         add_special_tokens=False,
@@ -364,7 +304,8 @@ def stream_generate(message, history):
         input_ids=input_ids,
         max_new_tokens=MAX_NEW_TOKENS,
         do_sample=True,
-        temperature=0.7,
+        temperature=0.85,
+        top_k=50,
         top_p=0.9,
         repetition_penalty=1.1,
         pad_token_id=tokenizer.pad_token_id,
@@ -383,9 +324,10 @@ def stream_generate(message, history):
     
     for new_text in streamer:
         buffer += new_text
+        # Code Bロジック: <NL>を改行に戻す
         clean_buffer = buffer.replace("<NL>", "\n")
         
-        # 暴走対策: モデルが勝手に「ユーザー:」と言い出したらカット
+        # 暴走対策
         if "ユーザー:" in clean_buffer:
             clean_buffer = clean_buffer.split("ユーザー:")[0]
             if displayed_text and not displayed_text.endswith("\n"):
@@ -394,6 +336,7 @@ def stream_generate(message, history):
             yield displayed_text, clean_buffer
             return
 
+        # Code Aロジック: 文単位で分割して画像切り替えタイミングを作る
         sentences = split_sentences(clean_buffer)
         
         if len(sentences) > 1 or (len(sentences) == 1 and any(sentences[0].endswith(end) for end in ["。", "！", "？", "\n"])):
@@ -430,6 +373,7 @@ def stream_generate(message, history):
 # ==========================================
 
 def respond(message, history):
+    # Gradio推奨のリスト形式で履歴更新
     new_history = history + [
         {"role": "user", "content": message},
         {"role": "assistant", "content": ""},
@@ -438,29 +382,39 @@ def respond(message, history):
     waiting_image = get_random_waiting_image()
     yield new_history, waiting_image
 
+    # 生成開始 (historyは直前の状態を渡して build_prompt 内で処理)
     generator = stream_generate(message, history)
     
+    final_text = ""
     for text, completed_sentence in generator:
+        final_text = text
         new_history[-1]["content"] = text
         
         if completed_sentence:
             current_image = get_character_image_by_keyword(completed_sentence)
             yield new_history, current_image
         else:
-            pass 
+            yield new_history, gr.Skip() # 画像変更なし
+
+    # Code Bロジック: 文末カット処理 (clean_response) を最後に適用
+    cleaned_text = clean_response(final_text)
+    if cleaned_text != final_text:
+        new_history[-1]["content"] = cleaned_text
+        yield new_history, gr.Skip()
 
 # ==========================================
 # 8. Gradio UI
 # ==========================================
 
 with gr.Blocks(css=CUSTOM_CSS) as demo:
-    gr.Markdown("## 🎭 AITuber Nemu (Proto) - Sentence-based Image Switching")
-    gr.Markdown("*各文ごとにキーワードを判定して、キャラクター表情を切り替えます*")
+    gr.Markdown("## 🎭 解析カイ (Character AI) - Image Switching Demo")
+    gr.Markdown("*文脈を読んで表情を変えながら会話します*")
 
     with gr.Row():
         chatbot = gr.Chatbot(
             height=700,
             show_label=False  # チャットのラベルを非表示
+            # type="messages" は指定しない（Code A準拠）
         )
         character = gr.Image(
             label="Character",
@@ -470,8 +424,6 @@ with gr.Blocks(css=CUSTOM_CSS) as demo:
             elem_id="character-view",   
             show_label=False,           # 画像のラベルを非表示
             interactive=False,
-            #show_download_button=False, # 機能でOFF
-            #show_share_button=False
         )
 
     msg = gr.Textbox(
