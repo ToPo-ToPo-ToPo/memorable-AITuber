@@ -10,10 +10,10 @@ import glob
 
 # 1. 処理対象の画像が入っているフォルダ名
 # ※このスクリプトと同じ場所にフォルダを置いてください
-INPUT_FOLDER = "assets/characters"
+INPUT_FOLDER = "assets/character_add"
 
 # 2. 処理後の画像を保存するフォルダ名（自動作成されます）
-OUTPUT_FOLDER = "assets/characters_v1"
+OUTPUT_FOLDER = "assets/characters_v1_add"
 
 # 3. 確定したベストなRGB透過設定値
 # (R:0-80, G:115-255, B:0-80 で設定)
