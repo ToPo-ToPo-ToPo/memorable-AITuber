@@ -104,10 +104,6 @@ if __name__ == "__main__":
         "お前うるさいな",
         "トポロジー最適化ってなに？"
     ]
-
-    print("-" * 50)
-    print(f"[{peft_name}] 推論テスト (System Promptなし)")
-    print("-" * 50)
     
     for q in questions:
         print(f"User: {q}")

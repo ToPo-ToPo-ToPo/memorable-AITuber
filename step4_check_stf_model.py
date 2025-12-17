@@ -9,7 +9,6 @@ from peft import PeftModel
 base_model_name = "ToPo-ToPo/rinna-japanese-gpt-neox-3.6b"
 
 # 学習したLoRAアダプターの保存先フォルダ
-# ※前回保存したフォルダ名に合わせてください
 peft_name = "models/lora-rinna-3.6b-v2" 
 
 #====================================================================
@@ -18,7 +17,6 @@ peft_name = "models/lora-rinna-3.6b-v2"
 print("モデルを読み込んでいます...")
 
 # 1. ベースモデルの読み込み (MPS / float32)
-# Macの場合、float32が最も安定します
 base_model = AutoModelForCausalLM.from_pretrained(
     base_model_name,
     device_map="mps",

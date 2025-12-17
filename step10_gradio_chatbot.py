@@ -16,24 +16,24 @@ from transformers import (
 # 1. 設定
 # ==========================================
 
-# モデル設定 (Code Bより)
+# モデル設定
 MODEL_NAME = "ToPo-ToPo/ai-character-suuchi-kai-3.6b-v2"
 CHAR_IMAGE_DIR = "assets/characters_v1"
 
-# システムプロンプト (Code Bより)
+# システムプロンプト
 SYSTEM_PROMPT = """
 あなたは「数値カイ」という名前の新人アシスタントです。女の子です。
 親しみやすいタメ口で会話します。
 """.strip()
 
-# 生成パラメータ (Code Bより調整)
+# 生成パラメータ
 MAX_NEW_TOKENS = 1024
 MEMORY_TURNS = 2       # 記憶する過去の会話往復数
 SENTENCE_PAUSE_DURATION = 1.0 # 画像切り替えのためのウェイト
 
 DEFAULT_IMAGE_PATH = os.path.join(CHAR_IMAGE_DIR, "normal1.png")
 
-# CSS定義 (Code Aを維持)
+# CSS定義
 CUSTOM_CSS = """
 /* ▼ メインの枠 */
 #character-view {
@@ -260,7 +260,7 @@ def build_prompt(current_message, history):
             pairs.append((current_user_text, content))
             current_user_text = None
     
-    # 2. 直近 MEMORY_TURNS 分だけ取得 (Code Bロジック)
+    # 2. 直近 MEMORY_TURNS 分だけ取得
     if MEMORY_TURNS > 0:
         recent_pairs = pairs[-MEMORY_TURNS:]
     else:
@@ -271,7 +271,7 @@ def build_prompt(current_message, history):
         safe_bot = bot_text.replace("\n", "<NL>")
         prompt += f"ユーザー: {safe_user}<NL>システム: {safe_bot}<NL>"
 
-    # 3. 今回の入力を追加 (システムプロンプトをここに埋め込む: Code Bロジック)
+    # 3. 今回の入力を追加 (システムプロンプトをここに埋め込む)
     safe_current = current_message.strip().replace("\n", "<NL>")
     safe_system = SYSTEM_PROMPT.replace("\n", "<NL>")
     
@@ -281,7 +281,7 @@ def build_prompt(current_message, history):
 
 def stream_generate(message, history):
     # ---------------------------------------------------------
-    # プロンプト作成 (Code Bのロジックを使用)
+    # プロンプト作成
     # ---------------------------------------------------------
     prompt = build_prompt(message, history)
 
@@ -324,7 +324,7 @@ def stream_generate(message, history):
     
     for new_text in streamer:
         buffer += new_text
-        # Code Bロジック: <NL>を改行に戻す
+        # <NL>を改行に戻す
         clean_buffer = buffer.replace("<NL>", "\n")
         
         # 暴走対策
@@ -336,7 +336,7 @@ def stream_generate(message, history):
             yield displayed_text, clean_buffer
             return
 
-        # Code Aロジック: 文単位で分割して画像切り替えタイミングを作る
+        # 文単位で分割して画像切り替えタイミングを作る
         sentences = split_sentences(clean_buffer)
         
         if len(sentences) > 1 or (len(sentences) == 1 and any(sentences[0].endswith(end) for end in ["。", "！", "？", "\n"])):
@@ -414,7 +414,7 @@ with gr.Blocks(css=CUSTOM_CSS) as demo:
         chatbot = gr.Chatbot(
             height=700,
             show_label=False  # チャットのラベルを非表示
-            # type="messages" は指定しない（Code A準拠）
+            # type="messages" は指定しない
         )
         character = gr.Image(
             label="Character",
