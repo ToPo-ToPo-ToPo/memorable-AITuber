@@ -29,7 +29,7 @@ SYSTEM_PROMPT = """
 # 生成パラメータ
 MAX_NEW_TOKENS = 1024
 MEMORY_TURNS = 2       # 記憶する過去の会話往復数
-SENTENCE_PAUSE_DURATION = 1.0 # 画像切り替えのためのウェイト
+SENTENCE_PAUSE_DURATION = 2.0 # 画像切り替えのためのウェイト
 
 DEFAULT_IMAGE_PATH = os.path.join(CHAR_IMAGE_DIR, "normal1.png")
 
