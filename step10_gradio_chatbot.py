@@ -242,7 +242,7 @@ def clean_response(text):
 
 def build_prompt(current_message, history):
     """
-    Code B由来のロジックをGradioの履歴形式に適用
+    Gradioの履歴形式に適用
     """
     prompt = ""
     
@@ -407,7 +407,7 @@ def respond(message, history):
 # ==========================================
 
 with gr.Blocks(css=CUSTOM_CSS) as demo:
-    gr.Markdown("## 🎭 数値カイ (Character AI) - Image Switching Demo")
+    gr.Markdown("## 数値カイ (Character AI) - Image Switching Demo")
     gr.Markdown("*文脈を読んで表情を変えながら会話します*")
 
     with gr.Row():
