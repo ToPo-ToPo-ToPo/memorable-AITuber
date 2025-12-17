@@ -54,7 +54,7 @@ class LoRATrainer:
         """モデルとトークナイザーの準備"""
         print(f"モデルを読み込んでいます: {self.c.model_name}")
         
-        dtype = torch.float32 if self.c.use_float32 else torch.float16
+        dtype = torch.float32
         
         self.model = AutoModelForCausalLM.from_pretrained(
             self.c.model_name,
