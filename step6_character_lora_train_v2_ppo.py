@@ -8,10 +8,11 @@ if __name__ == "__main__":
 
     # 設定のインスタンス化
     config = TrainingConfig(
-        model_name="ToPo-ToPo/rinna-japanese-gpt-neox-3.6b-lora-sft-v1",
+        #model_name="ToPo-ToPo/rinna-japanese-gpt-neox-3.6b-lora-sft-v1",
+        model_name="rinna/japanese-gpt-neox-3.6b-instruction-ppo",
         hf_dataset_id="ToPo-ToPo/ai-characters-QA",
-        hf_data_file="dataset-aituber-suuchi-kai-llama-cpp.jsonl",
-        peft_name="models/rinna-japanese-gpt-neox-3.6b-lora-suuchi-kai-v2",
+        hf_data_file="dataset-aituber-suuchi-kai-llama-cpp-v2.jsonl",
+        peft_name="models/rinna-japanese-gpt-neox-3.6b-ppo-suuchi-kai-v2",
         epochs=10,
         lora_r=32,
         lora_alpha=64
