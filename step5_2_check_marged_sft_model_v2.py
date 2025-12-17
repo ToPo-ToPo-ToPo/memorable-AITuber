@@ -10,7 +10,6 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 #====================================================================
 # ベースモデル（学習に使ったものと同じ）
 base_model_name = "models/rinna-japanese-gpt-neox-3.6b-lora-sft-v2"
-#base_model_name = "ToPo-ToPo/rinna-japanese-gpt-neox-3.6b-lora-sft-v2"
 
 #====================================================================
 # モデルとトークナイザーの準備
