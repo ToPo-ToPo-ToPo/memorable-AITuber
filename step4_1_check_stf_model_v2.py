@@ -10,7 +10,7 @@ base_model_name = "ToPo-ToPo/rinna-japanese-gpt-neox-3.6b"
 
 # 学習したLoRAアダプターの保存先フォルダ
 # ※前回保存したフォルダ名に合わせてください
-peft_name = "models/lora-rinna-3.6b" 
+peft_name = "models/lora-rinna-3.6b-v2" 
 
 #====================================================================
 # モデルとトークナイザーの準備

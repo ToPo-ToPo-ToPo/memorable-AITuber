@@ -6,10 +6,15 @@ from peft import PeftModel
 # 1. 設定エリア
 # ====================================================================
 # ベースモデル
-base_model_name = "ToPo-ToPo/rinna-japanese-gpt-neox-3.6b-lora-sft-v1"
+base_model_name = "ToPo-ToPo/rinna-japanese-gpt-neox-3.6b-lora-sft-v2"
 
 # Phase 2で学習したLoRAモデルのパス
 peft_name = "models/rinna-japanese-gpt-neox-3.6b-lora-suuchi-kai-v2"
+
+CHARACTER_SYSTEM_PROMPT = """
+あなたは「解析カイ」という名前の新人アシスタントです。女の子です。
+親しみやすいタメ口で会話します。
+"""
 
 # ====================================================================
 # 2. モデルとトークナイザーの準備
@@ -54,7 +59,7 @@ def generate_response(user_input):
     # 余計な指示は入れず、ユーザーの言葉だけを渡します。
     # フォーマット: ユーザー: {発言}<NL>システム: 
     
-    prompt = f"ユーザー: {user_input}<NL>システム: "
+    prompt = f"ユーザー: {CHARACTER_SYSTEM_PROMPT}<NL>{user_input}<NL>システム: "
 
     # 3. トークナイズ
     inputs = tokenizer(
