@@ -18,7 +18,7 @@ from transformers import (
 
 #MODEL_NAME = "rinna/japanese-gpt-neox-3.6b-instruction-sft-v2"
 MODEL_NAME = "rinna/japanese-gpt-neox-3.6b-instruction-ppo"
-CHAR_IMAGE_DIR = "assets/characters"
+CHAR_IMAGE_DIR = "assets/characters_v1"
 
 SYSTEM_PROMPT = (
     "あなたはAITuberの『根夢（ねむ）』です。"
